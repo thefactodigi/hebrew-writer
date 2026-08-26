@@ -98,9 +98,18 @@ def save_histories() -> None:
 
 def allowed_user_ids() -> set[int]:
     raw = os.environ.get("TELEGRAM_ALLOWED_USER_IDS", "").strip()
-    if not raw:
-        return set()
-    return {int(x) for x in raw.replace(" ", "").split(",") if x}
+    ids = set()
+    for x in raw.replace(" ", "").split(","):
+        if not x:
+            continue
+        if x.lstrip("-").isdigit():
+            ids.add(int(x))
+        else:
+            log.warning(
+                "TELEGRAM_ALLOWED_USER_IDS: מתעלם מ-%r — צריך מזהה מספרי "
+                "(קבל אותו מ-@userinfobot), לא שם משתמש", x
+            )
+    return ids
 
 
 ALLOWED_IDS = allowed_user_ids()
