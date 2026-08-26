@@ -167,6 +167,15 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
+async def cmd_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # פקודה פתוחה לכולם בכוונה, כדי שאפשר יהיה לברר מזהה לפני נעילת הבוט
+    user = update.effective_user
+    await update.message.reply_text(
+        f"המזהה המספרי שלך בטלגרם: {user.id}\n"
+        "זה המספר שמכניסים ל-TELEGRAM_ALLOWED_USER_IDS כדי לנעול את הבוט."
+    )
+
+
 async def cmd_reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not is_allowed(update):
         return
@@ -206,6 +215,7 @@ def main() -> None:
 
     app = Application.builder().token(token).build()
     app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("id", cmd_id))
     app.add_handler(CommandHandler("reset", cmd_reset))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
