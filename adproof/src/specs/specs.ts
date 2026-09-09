@@ -99,7 +99,9 @@ export const SPECS: PlacementSpec[] = [
   // ── Meta — Facebook + Instagram (ratio) ───────────────────────────────────
   { id: 'meta_feed_square', platform: 'meta', group: 'Feed', name: 'Feed Square (1:1)', width: 1080, height: 1080, matchType: 'ratio', minWidth: 600, minHeight: 600, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], mockup: 'feed-card', note: 'פיד FB + IG', typicalRenderWidth: 375 },
   { id: 'meta_feed_vertical', platform: 'meta', group: 'Feed', name: 'Feed Vertical (4:5)', width: 1080, height: 1350, matchType: 'ratio', minWidth: 600, minHeight: 750, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], mockup: 'feed-card', note: 'פיד מובייל, הפורמט המועדף', typicalRenderWidth: 375 },
-  { id: 'meta_stories', platform: 'meta', group: 'Stories / Reels', name: 'Stories / Reels (9:16)', width: 1080, height: 1920, matchType: 'ratio', minWidth: 600, minHeight: 1067, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], safeArea: { top: 0.14, bottom: 0.2 }, mockup: 'phone-story', note: 'אזור בטוח: 14% עליון, 20% תחתון', typicalRenderWidth: 375 },
+  // אזור בטוח מאוחד של מטא ל-9:16 (Stories+Reels, מרץ 2026): 14% עליון,
+  // 35% תחתון, 6% מכל צד — Reels הוא המקרה המחמיר והספק המאוחד בנוי סביבו.
+  { id: 'meta_stories', platform: 'meta', group: 'Stories / Reels', name: 'Stories / Reels (9:16)', width: 1080, height: 1920, matchType: 'ratio', minWidth: 600, minHeight: 1067, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], safeArea: { top: 0.14, bottom: 0.35, left: 0.06, right: 0.06 }, mockup: 'phone-story', note: 'אזור בטוח מאוחד: 14% עליון, 35% תחתון, 6% צדדים', typicalRenderWidth: 375 },
   { id: 'meta_link', platform: 'meta', group: 'Right Column / Link', name: 'Right Column / Link (1.91:1)', width: 1200, height: 628, matchType: 'ratio', minWidth: 600, minHeight: 314, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], note: 'דסקטופ', mockup: 'feed-card', typicalRenderWidth: 500 },
 
   // ── Yandex Direct (exact, רוב הפורמטים 120–150KB) ────────────────────────

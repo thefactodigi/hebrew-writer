@@ -7,6 +7,7 @@ import UnassignedZone from './UnassignedZone.tsx';
 import MissingPanel from './MissingPanel.tsx';
 import Lightbox from './Lightbox.tsx';
 import UploadZone from './UploadZone.tsx';
+import IssuesReport from './IssuesReport.tsx';
 
 type Tab = 'all' | Platform;
 
@@ -29,6 +30,7 @@ export default function ReviewBoard() {
   const showSafeZones = useSession((s) => s.showSafeZones);
   const setShowSafeZones = useSession((s) => s.setShowSafeZones);
   const [tab, setTab] = useState<Tab>('all');
+  const [reportOpen, setReportOpen] = useState(false);
 
   const shownPlatforms =
     tab === 'all' ? board.platforms : board.platforms.filter((p) => p.platform === tab);
@@ -92,6 +94,14 @@ export default function ReviewBoard() {
           אזור בטוח {showSafeZones ? '✓' : ''}
         </button>
 
+        <button
+          className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-1 text-amber-800 hover:bg-amber-100"
+          onClick={() => setReportOpen(true)}
+          title="מידות חסרות, יציאה מאזור בטוח, טקסט חתוך/קטן וחשדות כתיב (OCR מקומי). למעצב בלבד — לא נכנס ל-PDF."
+        >
+          דוח בעיות
+        </button>
+
         {viewMode === 'actual' && (
           <span className="text-xs text-gray-400">
             באנרים ב-100% פיקסלים · נכסי Meta/PMax בגודל שבו הם מוצגים במכשיר
@@ -115,6 +125,7 @@ export default function ReviewBoard() {
 
       <MissingPanel missing={board.missing} />
       <Lightbox items={lightboxItems} />
+      <IssuesReport board={board} open={reportOpen} onClose={() => setReportOpen(false)} />
     </div>
   );
 }
