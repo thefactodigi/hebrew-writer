@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
 import { matchAll, versionTags, type Match, type FileMeta } from '../engine/matcher.ts';
+import type { ViewMode } from '../engine/scale.ts';
 import type { ImageFormat } from '../specs/specs.ts';
 
 export interface CreativeFile {
@@ -43,6 +44,8 @@ interface SessionState {
   mockupModes: Record<string, MockupMode>; // assignmentKey → mode
   /** סדר קבוצות ידני: מפתח "platform|group" לפי סדר תצוגה */
   groupOrder: string[];
+  /** smart = קנה מידה חכם; actual = הגודל שבו הפלייסמנט באמת נראה בפלטפורמה */
+  viewMode: ViewMode;
 
   setCampaignName: (v: string) => void;
   setClientName: (v: string) => void;
@@ -50,6 +53,9 @@ interface SessionState {
   removeFile: (fileId: string) => void;
   toggleHidden: (fileId: string, specId: string) => void;
   setMockupMode: (fileId: string, specId: string, mode: MockupMode) => void;
+  /** החלת מצב מוקאפ על כל ההתאמות בבת אחת */
+  setAllMockupModes: (keys: string[], mode: MockupMode) => void;
+  setViewMode: (mode: ViewMode) => void;
   addManualAssignment: (fileId: string, specId: string) => void;
   removeAssignment: (fileId: string, specId: string) => void;
   moveAssignment: (fileId: string, fromSpecId: string | null, toSpecId: string) => void;
@@ -81,6 +87,7 @@ interface PersistedSession {
   hiddenAssignments: string[];
   mockupModes: Record<string, MockupMode>;
   groupOrder: string[];
+  viewMode?: ViewMode;
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -97,6 +104,7 @@ function persist(state: SessionState) {
       hiddenAssignments: state.hiddenAssignments,
       mockupModes: state.mockupModes,
       groupOrder: state.groupOrder,
+      viewMode: state.viewMode,
     };
     void idbSet(DB_KEY, data).catch(() => {
       /* אין חסימה על כשל שמירה — הסשן ממשיך לרוץ בזיכרון */
@@ -120,6 +128,7 @@ export const useSession = create<SessionState>((set, get) => {
     hiddenAssignments: [],
     mockupModes: {},
     groupOrder: [],
+    viewMode: 'smart',
 
     setCampaignName: (v) => update({ campaignName: v }),
     setClientName: (v) => update({ clientName: v }),
@@ -147,6 +156,13 @@ export const useSession = create<SessionState>((set, get) => {
 
     setMockupMode: (fileId, specId, mode) =>
       update({ mockupModes: { ...get().mockupModes, [assignmentKey(fileId, specId)]: mode } }),
+
+    setAllMockupModes: (keys, mode) =>
+      update({
+        mockupModes: { ...get().mockupModes, ...Object.fromEntries(keys.map((k) => [k, mode])) },
+      }),
+
+    setViewMode: (mode) => update({ viewMode: mode }),
 
     addManualAssignment: (fileId, specId) => {
       const key = assignmentKey(fileId, specId);
@@ -189,6 +205,7 @@ export const useSession = create<SessionState>((set, get) => {
         hiddenAssignments: [],
         mockupModes: {},
         groupOrder: [],
+        viewMode: 'smart',
       });
     },
 
@@ -205,6 +222,7 @@ export const useSession = create<SessionState>((set, get) => {
             hiddenAssignments: data.hiddenAssignments,
             mockupModes: data.mockupModes ?? {},
             groupOrder: data.groupOrder ?? [],
+            viewMode: data.viewMode ?? 'smart',
             loaded: true,
           });
           return;

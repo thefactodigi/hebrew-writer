@@ -31,6 +31,11 @@ export interface PlacementSpec {
   isLogo?: boolean;
   /** מוקאפ הקשר מתאים */
   mockup?: 'website' | 'phone-story' | 'feed-card';
+  /**
+   * ל-ratio בלבד: הרוחב שבו הנכס באמת מוצג בפלטפורמה (קובץ 1080×1920
+   * מוצג בפועל על מסך טלפון של ~375px). משמש למצב "גודל אמיתי".
+   */
+  typicalRenderWidth?: number;
   /** הערה קצרה למעצב */
   note?: string;
 }
@@ -70,17 +75,17 @@ export const SPECS: PlacementSpec[] = [
   { id: 'gdn_480x320', platform: 'google_display', group: 'Mobile', name: 'Interstitial Landscape', width: 480, height: 320, matchType: 'exact', maxFileKb: 150, formats: ['jpg', 'png', 'gif'], mockup: 'website' },
 
   // ── Google Performance Max (ratio, עד 5120KB, JPG/PNG בלבד) ───────────────
-  { id: 'pmax_landscape', platform: 'pmax', group: 'Images', name: 'Landscape Image (1.91:1)', width: 1200, height: 628, matchType: 'ratio', minWidth: 600, minHeight: 314, maxFileKb: 5120, formats: ['jpg', 'png'], required: true },
-  { id: 'pmax_square', platform: 'pmax', group: 'Images', name: 'Square Image (1:1)', width: 1200, height: 1200, matchType: 'ratio', minWidth: 300, minHeight: 300, maxFileKb: 5120, formats: ['jpg', 'png'], required: true },
-  { id: 'pmax_portrait', platform: 'pmax', group: 'Images', name: 'Portrait Image (4:5)', width: 960, height: 1200, matchType: 'ratio', minWidth: 480, minHeight: 600, maxFileKb: 5120, formats: ['jpg', 'png'], note: 'מומלץ' },
-  { id: 'pmax_logo_square', platform: 'pmax', group: 'Logos', name: 'Square Logo (1:1)', width: 1200, height: 1200, matchType: 'ratio', minWidth: 128, minHeight: 128, maxFileKb: 5120, formats: ['jpg', 'png'], required: true, isLogo: true },
-  { id: 'pmax_logo_landscape', platform: 'pmax', group: 'Logos', name: 'Landscape Logo (4:1)', width: 1200, height: 300, matchType: 'ratio', minWidth: 512, minHeight: 128, maxFileKb: 5120, formats: ['jpg', 'png'], isLogo: true },
+  { id: 'pmax_landscape', platform: 'pmax', group: 'Images', name: 'Landscape Image (1.91:1)', width: 1200, height: 628, matchType: 'ratio', minWidth: 600, minHeight: 314, maxFileKb: 5120, formats: ['jpg', 'png'], required: true, mockup: 'feed-card', typicalRenderWidth: 400 },
+  { id: 'pmax_square', platform: 'pmax', group: 'Images', name: 'Square Image (1:1)', width: 1200, height: 1200, matchType: 'ratio', minWidth: 300, minHeight: 300, maxFileKb: 5120, formats: ['jpg', 'png'], required: true, mockup: 'feed-card', typicalRenderWidth: 375 },
+  { id: 'pmax_portrait', platform: 'pmax', group: 'Images', name: 'Portrait Image (4:5)', width: 960, height: 1200, matchType: 'ratio', minWidth: 480, minHeight: 600, maxFileKb: 5120, formats: ['jpg', 'png'], note: 'מומלץ', mockup: 'feed-card', typicalRenderWidth: 375 },
+  { id: 'pmax_logo_square', platform: 'pmax', group: 'Logos', name: 'Square Logo (1:1)', width: 1200, height: 1200, matchType: 'ratio', minWidth: 128, minHeight: 128, maxFileKb: 5120, formats: ['jpg', 'png'], required: true, isLogo: true, typicalRenderWidth: 128 },
+  { id: 'pmax_logo_landscape', platform: 'pmax', group: 'Logos', name: 'Landscape Logo (4:1)', width: 1200, height: 300, matchType: 'ratio', minWidth: 512, minHeight: 128, maxFileKb: 5120, formats: ['jpg', 'png'], isLogo: true, typicalRenderWidth: 320 },
 
   // ── Meta — Facebook + Instagram (ratio) ───────────────────────────────────
-  { id: 'meta_feed_square', platform: 'meta', group: 'Feed', name: 'Feed Square (1:1)', width: 1080, height: 1080, matchType: 'ratio', minWidth: 600, minHeight: 600, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], mockup: 'feed-card', note: 'פיד FB + IG' },
-  { id: 'meta_feed_vertical', platform: 'meta', group: 'Feed', name: 'Feed Vertical (4:5)', width: 1080, height: 1350, matchType: 'ratio', minWidth: 600, minHeight: 750, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], mockup: 'feed-card', note: 'פיד מובייל, הפורמט המועדף' },
-  { id: 'meta_stories', platform: 'meta', group: 'Stories / Reels', name: 'Stories / Reels (9:16)', width: 1080, height: 1920, matchType: 'ratio', minWidth: 600, minHeight: 1067, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], safeArea: { top: 0.14, bottom: 0.2 }, mockup: 'phone-story', note: 'אזור בטוח: 14% עליון, 20% תחתון' },
-  { id: 'meta_link', platform: 'meta', group: 'Right Column / Link', name: 'Right Column / Link (1.91:1)', width: 1200, height: 628, matchType: 'ratio', minWidth: 600, minHeight: 314, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], note: 'דסקטופ' },
+  { id: 'meta_feed_square', platform: 'meta', group: 'Feed', name: 'Feed Square (1:1)', width: 1080, height: 1080, matchType: 'ratio', minWidth: 600, minHeight: 600, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], mockup: 'feed-card', note: 'פיד FB + IG', typicalRenderWidth: 375 },
+  { id: 'meta_feed_vertical', platform: 'meta', group: 'Feed', name: 'Feed Vertical (4:5)', width: 1080, height: 1350, matchType: 'ratio', minWidth: 600, minHeight: 750, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], mockup: 'feed-card', note: 'פיד מובייל, הפורמט המועדף', typicalRenderWidth: 375 },
+  { id: 'meta_stories', platform: 'meta', group: 'Stories / Reels', name: 'Stories / Reels (9:16)', width: 1080, height: 1920, matchType: 'ratio', minWidth: 600, minHeight: 1067, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], safeArea: { top: 0.14, bottom: 0.2 }, mockup: 'phone-story', note: 'אזור בטוח: 14% עליון, 20% תחתון', typicalRenderWidth: 375 },
+  { id: 'meta_link', platform: 'meta', group: 'Right Column / Link', name: 'Right Column / Link (1.91:1)', width: 1200, height: 628, matchType: 'ratio', minWidth: 600, minHeight: 314, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], note: 'דסקטופ', mockup: 'feed-card', typicalRenderWidth: 500 },
 
   // ── Yandex Direct (exact, רוב הפורמטים 120–150KB) ────────────────────────
   { id: 'yandex_240x400', platform: 'yandex', group: 'Desktop', name: '240×400 (הפורמט הנפוץ ביאנדקס)', width: 240, height: 400, matchType: 'exact', maxFileKb: 120, formats: ['jpg', 'png', 'gif'], mockup: 'website' },

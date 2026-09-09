@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import type { AssignmentView } from '../store/derive.ts';
-import { displaySize, scaleLabel } from '../engine/scale.ts';
+import { actualSize, displaySize, scaleLabel } from '../engine/scale.ts';
 import { useSession } from '../store/session.ts';
 import MockupFrame from './MockupFrame.tsx';
 
@@ -24,11 +24,15 @@ function CreativeCard({ item, onOpen }: Props) {
   const toggleHidden = useSession((s) => s.toggleHidden);
   const setMockupMode = useSession((s) => s.setMockupMode);
   const removeFile = useSession((s) => s.removeFile);
+  const viewMode = useSession((s) => s.viewMode);
 
   // מידות הסלוט (קובץ רטינה מוצג בגודל הסלוט, בחדות מלאה)
   const slotW = spec.matchType === 'exact' ? spec.width : Math.round(file.width / retina);
   const slotH = spec.matchType === 'exact' ? spec.height : Math.round(file.height / retina);
-  const d = displaySize(slotW, slotH);
+  const d =
+    viewMode === 'actual'
+      ? actualSize(slotW, slotH, spec.typicalRenderWidth)
+      : displaySize(slotW, slotH);
 
   const img = (
     <div className="relative" style={{ width: d.width, height: d.height }}>
@@ -70,14 +74,20 @@ function CreativeCard({ item, onOpen }: Props) {
       }}
     >
       {mockupMode === 'context' && spec.mockup ? (
-        <MockupFrame kind={spec.mockup} displayWidth={d.width}>{img}</MockupFrame>
+        <MockupFrame spec={spec} displayWidth={d.width} displayHeight={d.height}>{img}</MockupFrame>
       ) : (
         <div className="rounded border border-gray-200 bg-white p-1 shadow-sm">{img}</div>
       )}
 
       <div className="flex max-w-full flex-wrap items-center justify-center gap-1" dir="ltr">
         <Tag>{`${slotW}×${slotH}`}</Tag>
-        {d.scale !== 1 && <Tag>{scaleLabel(d.scale)}</Tag>}
+        {d.platformSize ? (
+          <Tag tone="blue">
+            {spec.matchType !== 'exact' ? 'כמו במכשיר' : d.scale >= 0.99 ? '100% פיקסלים' : scaleLabel(d.scale)}
+          </Tag>
+        ) : (
+          d.scale !== 1 && <Tag>{scaleLabel(d.scale)}</Tag>
+        )}
         {retina > 1 && <Tag tone="blue">@{retina}x</Tag>}
         {file.animated && <Tag tone="blue">Animated GIF</Tag>}
         {versionTag && <Tag tone="blue">{versionTag}</Tag>}

@@ -23,20 +23,24 @@ export default function ReviewBoard() {
     [files, manualAdds, manualRemoves, hiddenAssignments, mockupModes, groupOrder],
   );
 
+  const viewMode = useSession((s) => s.viewMode);
+  const setViewMode = useSession((s) => s.setViewMode);
+  const setAllMockupModes = useSession((s) => s.setAllMockupModes);
   const [tab, setTab] = useState<Tab>('all');
 
   const shownPlatforms =
     tab === 'all' ? board.platforms : board.platforms.filter((p) => p.platform === tab);
   const allGroupKeys = board.platforms.flatMap((p) => p.groups.map((g) => g.key));
-  const lightboxItems = shownPlatforms
-    .flatMap((p) => p.groups)
-    .flatMap((g) => g.items)
-    .filter((i) => !i.hidden);
+  const shownItems = shownPlatforms.flatMap((p) => p.groups).flatMap((g) => g.items);
+  const lightboxItems = shownItems.filter((i) => !i.hidden);
+  const mockupableKeys = shownItems.filter((i) => i.spec.mockup).map((i) => i.key);
+  const allInContext =
+    mockupableKeys.length > 0 && shownItems.filter((i) => i.spec.mockup).every((i) => i.mockupMode === 'context');
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-24">
       {/* טאבים — רק פלטפורמות שיש בהן תוכן */}
-      <nav className="mb-6 flex gap-1 border-b border-gray-300">
+      <nav className="mb-4 flex gap-1 border-b border-gray-300">
         <TabButton active={tab === 'all'} onClick={() => setTab('all')}>הכל</TabButton>
         {board.platforms.map((p) => (
           <TabButton key={p.platform} active={tab === p.platform} onClick={() => setTab(p.platform)}>
@@ -45,6 +49,41 @@ export default function ReviewBoard() {
           </TabButton>
         ))}
       </nav>
+
+      {/* סרגל תצוגה: קנה מידה + מוקאפים */}
+      <div className="mb-6 flex flex-wrap items-center gap-3 text-sm">
+        <div className="flex overflow-hidden rounded-lg border border-gray-300 bg-white">
+          <button
+            className={`px-3 py-1 ${viewMode === 'smart' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+            onClick={() => setViewMode('smart')}
+            title="קנה מידה נוח לסקירה — הצד הקצר לא יורד מ-140px"
+          >
+            תצוגה חכמה
+          </button>
+          <button
+            className={`px-3 py-1 ${viewMode === 'actual' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+            onClick={() => setViewMode('actual')}
+            title="כל התאמה בגודל שבו היא באמת נראית בפלטפורמה: באנרים ב-100% פיקסלים, נכסי Meta/PMax ברוחב התצוגה במכשיר"
+          >
+            גודל אמיתי
+          </button>
+        </div>
+
+        <button
+          className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-gray-600 hover:bg-gray-50"
+          onClick={() => setAllMockupModes(mockupableKeys, allInContext ? 'clean' : 'context')}
+          disabled={mockupableKeys.length === 0}
+          title="הצגת כל ההתאמות בתוך מוקאפ של הפלייסמנט (או חזרה לתצוגה נקייה)"
+        >
+          {allInContext ? 'הכל נקי' : 'הכל בהקשר'}
+        </button>
+
+        {viewMode === 'actual' && (
+          <span className="text-xs text-gray-400">
+            באנרים ב-100% פיקסלים · נכסי Meta/PMax בגודל שבו הם מוצגים במכשיר
+          </span>
+        )}
+      </div>
 
       {shownPlatforms.map((p) => (
         <PlatformSection key={p.platform} platform={p} allGroupKeys={allGroupKeys} />

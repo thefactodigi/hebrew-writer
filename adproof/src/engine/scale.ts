@@ -17,6 +17,32 @@ export interface DisplaySize {
   scale: number;
   /** באנר רחב שתופס שורה מלאה */
   fullRow: boolean;
+  /** מוצג בגודל שבו הפלייסמנט באמת נראה בפלטפורמה */
+  platformSize?: boolean;
+}
+
+export type ViewMode = 'smart' | 'actual';
+
+/**
+ * מצב "גודל אמיתי": התאמה מוצגת בגודל שבו היא באמת נראית בפלטפורמה.
+ * לסלוטים exact זה 100% פיקסלים; לנכסי ratio זה רוחב הרינדור במכשיר
+ * (typicalRenderWidth) — קובץ 1080×1920 מוצג בפועל על מסך של ~375px.
+ */
+export function actualSize(
+  slotW: number,
+  slotH: number,
+  typicalRenderWidth: number | undefined,
+  rowWidth: number = WIDE_ROW_WIDTH,
+): DisplaySize {
+  const targetW = Math.min(typicalRenderWidth ?? slotW, rowWidth);
+  const scale = targetW / slotW;
+  return {
+    width: slotW * scale,
+    height: slotH * scale,
+    scale,
+    fullRow: slotW / slotH > 5 && targetW > rowWidth * 0.8,
+    platformSize: true,
+  };
 }
 
 /**
