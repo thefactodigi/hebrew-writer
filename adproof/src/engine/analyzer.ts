@@ -157,6 +157,29 @@ export async function analyzeFile(
   for (const a of assignments) {
     const sa = a.spec.safeArea;
     if (!sa) continue;
+
+    // פינה שמורה (תגית המודעה ביאנדקס) — 65×30px בסלוט, מתורגם לפיקסלי הקובץ
+    if (sa.cornerTL) {
+      const scale = a.spec.matchType === 'exact' ? a.retina : W / a.spec.width;
+      const cw = sa.cornerTL.w * scale;
+      const ch = sa.cornerTL.h * scale;
+      const inCorner = meaningful.filter(
+        (w) => w.conf >= CONF_POSITION && overlapRatio(w, 0, 0, cw, ch) > 0.25,
+      );
+      if (inCorner.length) {
+        const sample = inCorner.slice(0, 3).map((w) => `"${stripPunct(w.text)}"`).join(', ');
+        issues.push({
+          category: 'safe-zone',
+          level: 'warn',
+          fileId: file.id,
+          fileName: file.name,
+          placement: a.spec.name,
+          message: `תוכן באזור תגית "מודעה" (פינה שמאלית-עליונה, 65×30px): ${sample} — התגית של יאנדקס תסתיר אותו`,
+        });
+      }
+    }
+
+    if (!(sa.top || sa.bottom || sa.left || sa.right)) continue;
     const sx0 = (sa.left ?? 0) * W;
     const sy0 = (sa.top ?? 0) * H;
     const sx1 = W - (sa.right ?? 0) * W;

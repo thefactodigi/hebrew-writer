@@ -13,12 +13,19 @@ export interface SafeArea {
   bottom?: number;
   left?: number;
   right?: number;
+  /**
+   * אזור שמור בפינה השמאלית-עליונה, בפיקסלים של הסלוט —
+   * תגית "Реклама/מודעה" ביאנדקס: אסור לוגו, מחיר או CTA בשטח הזה.
+   */
+  cornerTL?: { w: number; h: number };
 }
 
-/** שוליים בטוחים מומלצים לבאנרים ולפיד — 5% מכל צד */
+/** שוליים בטוחים מומלצים לבאנרים — 5% מכל צד (אין חיתוך רשמי ב-Display) */
 export const SAFE_MARGIN_5: SafeArea = { top: 0.05, bottom: 0.05, left: 0.05, right: 0.05 };
-/** כלל ה-80% המרכזי של PMax — התוכן החשוב ב-80% הפנימיים */
+/** כלל ה-80% המרכזי של PMax — התוכן החשוב ב-80% הפנימיים (תיעוד גוגל רשמי) */
 export const SAFE_PMAX_80: SafeArea = { top: 0.1, bottom: 0.1, left: 0.1, right: 0.1 };
+/** יאנדקס: פינה שמאלית-עליונה שמורה לתגית המודעה (65×30px), שאר הבאנר חופשי */
+export const SAFE_YANDEX_TAG: SafeArea = { cornerTL: { w: 65, h: 30 } };
 
 export interface PlacementSpec {
   id: string;
@@ -97,8 +104,9 @@ export const SPECS: PlacementSpec[] = [
   { id: 'pmax_logo_landscape', platform: 'pmax', group: 'Logos', name: 'Landscape Logo (4:1)', width: 1200, height: 300, matchType: 'ratio', minWidth: 512, minHeight: 128, maxFileKb: 5120, formats: ['jpg', 'png'], isLogo: true, typicalRenderWidth: 320 },
 
   // ── Meta — Facebook + Instagram (ratio) ───────────────────────────────────
-  { id: 'meta_feed_square', platform: 'meta', group: 'Feed', name: 'Feed Square (1:1)', width: 1080, height: 1080, matchType: 'ratio', minWidth: 600, minHeight: 600, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], mockup: 'feed-card', note: 'פיד FB + IG', typicalRenderWidth: 375 },
-  { id: 'meta_feed_vertical', platform: 'meta', group: 'Feed', name: 'Feed Vertical (4:5)', width: 1080, height: 1350, matchType: 'ratio', minWidth: 600, minHeight: 750, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], mockup: 'feed-card', note: 'פיד מובייל, הפורמט המועדף', typicalRenderWidth: 375 },
+  // שוליים בפיד: הגנה מחיתוך במעבר בין 1:1 ל-4:5 (~9% צדדים; ב-4:5 גם ~18% למעלה/למטה)
+  { id: 'meta_feed_square', platform: 'meta', group: 'Feed', name: 'Feed Square (1:1)', width: 1080, height: 1080, matchType: 'ratio', minWidth: 600, minHeight: 600, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], mockup: 'feed-card', note: 'פיד FB + IG · שוליים ~9% מכל צד', typicalRenderWidth: 375, safeArea: { top: 0.09, bottom: 0.09, left: 0.09, right: 0.09 } },
+  { id: 'meta_feed_vertical', platform: 'meta', group: 'Feed', name: 'Feed Vertical (4:5)', width: 1080, height: 1350, matchType: 'ratio', minWidth: 600, minHeight: 750, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], mockup: 'feed-card', note: 'פיד מובייל, הפורמט המועדף · שוליים ~18% למעלה/למטה, ~9% צדדים', typicalRenderWidth: 375, safeArea: { top: 0.18, bottom: 0.18, left: 0.09, right: 0.09 } },
   // אזור בטוח מאוחד של מטא ל-9:16 (Stories+Reels, מרץ 2026): 14% עליון,
   // 35% תחתון, 6% מכל צד — Reels הוא המקרה המחמיר והספק המאוחד בנוי סביבו.
   { id: 'meta_stories', platform: 'meta', group: 'Stories / Reels', name: 'Stories / Reels (9:16)', width: 1080, height: 1920, matchType: 'ratio', minWidth: 600, minHeight: 1067, maxFileKb: 30720, formats: ['jpg', 'png', 'gif'], safeArea: { top: 0.14, bottom: 0.35, left: 0.06, right: 0.06 }, mockup: 'phone-story', note: 'אזור בטוח מאוחד: 14% עליון, 35% תחתון, 6% צדדים', typicalRenderWidth: 375 },
@@ -123,10 +131,12 @@ export const SPECS: PlacementSpec[] = [
 ];
 
 // אזור בטוח לכל פלייסמנט שלא הגדיר אחד מפורשות:
-// PMax (תמונות) — כלל ה-80% המרכזי; לוגואים — בלי; כל השאר — שוליים 5%.
+// PMax (תמונות) — כלל ה-80% המרכזי; יאנדקס — פינת תגית המודעה בלבד;
+// לוגואים — בלי; כל השאר — שוליים מומלצים 5%.
 for (const s of SPECS) {
   if (s.safeArea || s.isLogo) continue;
-  s.safeArea = s.platform === 'pmax' ? SAFE_PMAX_80 : SAFE_MARGIN_5;
+  s.safeArea =
+    s.platform === 'pmax' ? SAFE_PMAX_80 : s.platform === 'yandex' ? SAFE_YANDEX_TAG : SAFE_MARGIN_5;
 }
 
 export function getSpec(id: string): PlacementSpec | undefined {

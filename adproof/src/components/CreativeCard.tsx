@@ -45,7 +45,7 @@ function CreativeCard({ item, onOpen }: Props) {
         onClick={onOpen}
         draggable={false}
       />
-      {showSafeZones && spec.safeArea && (
+      {showSafeZones && spec.safeArea && (spec.safeArea.top || spec.safeArea.bottom || spec.safeArea.left || spec.safeArea.right) ? (
         <div
           className="pointer-events-none absolute border border-dashed border-emerald-400"
           style={{
@@ -56,6 +56,16 @@ function CreativeCard({ item, onOpen }: Props) {
             boxShadow: '0 0 0 9999px rgba(16, 185, 129, 0.18)',
           }}
           title="אזור בטוח — תוכן חשוב נשאר בתוך המסגרת המקווקוות"
+        />
+      ) : null}
+      {showSafeZones && spec.safeArea?.cornerTL && (
+        <div
+          className="pointer-events-none absolute left-0 top-0 flex items-start justify-start border border-dashed border-emerald-500 bg-emerald-400/25"
+          style={{
+            width: spec.safeArea.cornerTL.w * (d.width / slotW),
+            height: spec.safeArea.cornerTL.h * (d.height / slotH),
+          }}
+          title='אזור שמור לתגית "מודעה" של יאנדקס — בלי לוגו, מחיר או CTA'
         />
       )}
     </div>
