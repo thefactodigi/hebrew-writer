@@ -11,8 +11,17 @@ Performance Max, Meta, Yandex), מציג מסך סקירה בפרופורציו�
 npm install
 npm run dev        # פיתוח
 npm run build      # בילד סטטי ל-dist/
+npm run build:single  # קובץ HTML יחיד שנפתח בלחיצה כפולה (dist-single/)
 npm test           # בדיקות מנוע השיוך
 ```
+
+## פריסה ב-Vercel (עדכון אוטומטי בכל push)
+
+חיבור חד-פעמי: ב-vercel.com → Add New → Project → מייבאים את הריפו
+`thefactodigi/hebrew-writer` → מגדירים **Root Directory: `adproof`** →
+Deploy. השאר (Vite, פקודת בילד, תיקיית פלט) מזוהה מ-`vercel.json`.
+מאותו רגע כל push ל-branch הפרודקשן מתפרסם אוטומטית, וכל branch אחר
+מקבל Preview URL משלו.
 
 ## מבנה
 
