@@ -170,7 +170,7 @@ export async function analyzeFile(
         const sample = inCorner.slice(0, 3).map((w) => `"${stripPunct(w.text)}"`).join(', ');
         issues.push({
           category: 'safe-zone',
-          level: 'warn',
+          level: 'error',
           fileId: file.id,
           fileName: file.name,
           placement: a.spec.name,

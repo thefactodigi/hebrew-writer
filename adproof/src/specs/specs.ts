@@ -142,3 +142,17 @@ for (const s of SPECS) {
 export function getSpec(id: string): PlacementSpec | undefined {
   return SPECS.find((s) => s.id === id);
 }
+
+export type SafeZoneSeverity = 'critical' | 'recommended';
+
+/**
+ * קריטי = הפלטפורמה באמת מכסה או חותכת שם (UI של סטוריז/רילס, חיתוך PMax,
+ * תגית המודעה של יאנדקס). מומלץ = שוליים לנוחות בלבד, בלי חיתוך רשמי.
+ */
+export function safeZoneSeverity(spec: PlacementSpec): SafeZoneSeverity | null {
+  if (!spec.safeArea) return null;
+  if (spec.mockup === 'phone-story') return 'critical';
+  if (spec.platform === 'pmax' && !spec.isLogo) return 'critical';
+  if (spec.safeArea.cornerTL) return 'critical';
+  return 'recommended';
+}

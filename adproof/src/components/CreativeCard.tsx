@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import type { AssignmentView } from '../store/derive.ts';
+import { PLATFORM_LABELS, safeZoneSeverity } from '../specs/specs.ts';
 import { actualSize, displaySize, scaleLabel } from '../engine/scale.ts';
 import { useSession } from '../store/session.ts';
 import MockupFrame from './MockupFrame.tsx';
@@ -34,6 +35,7 @@ function CreativeCard({ item, onOpen }: Props) {
     viewMode === 'actual'
       ? actualSize(slotW, slotH, spec.typicalRenderWidth)
       : displaySize(slotW, slotH);
+  const severity = safeZoneSeverity(spec);
 
   const img = (
     <div className="relative overflow-hidden" style={{ width: d.width, height: d.height }}>
@@ -83,6 +85,27 @@ function CreativeCard({ item, onOpen }: Props) {
         e.dataTransfer.effectAllowed = 'move';
       }}
     >
+      {/* שם הפלייסמנט + פלטפורמה + חומרת האזור הבטוח */}
+      <div className="flex max-w-full flex-wrap items-center justify-center gap-1.5 text-xs">
+        <span className="font-medium text-gray-700">{spec.name}</span>
+        <span className="text-gray-400">·</span>
+        <span className="text-gray-500">{PLATFORM_LABELS[spec.platform]}</span>
+        {severity && (
+          <span
+            className={`rounded px-1.5 py-0.5 text-[10px] leading-4 ${
+              severity === 'critical' ? 'bg-red-100 text-red-700' : 'bg-emerald-50 text-emerald-700'
+            }`}
+            title={
+              severity === 'critical'
+                ? 'הפלטפורמה מכסה או חותכת את האזורים המסומנים — חריגה תיעלם או תוסתר בפועל'
+                : 'שוליים מומלצים בלבד — אין חיתוך רשמי בפלייסמנט הזה'
+            }
+          >
+            {severity === 'critical' ? 'אזור בטוח — קריטי' : 'אזור בטוח — מומלץ'}
+          </span>
+        )}
+      </div>
+
       {mockupMode === 'context' && spec.mockup ? (
         <MockupFrame spec={spec} displayWidth={d.width} displayHeight={d.height}>{img}</MockupFrame>
       ) : (
