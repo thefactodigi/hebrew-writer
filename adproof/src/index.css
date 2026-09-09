@@ -1,0 +1,35 @@
+@import '@fontsource/heebo/400.css';
+@import '@fontsource/heebo/500.css';
+@import '@fontsource/heebo/700.css';
+@import 'tailwindcss';
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  font-family: 'Heebo', system-ui, sans-serif;
+}
+
+body {
+  /* רקע ניטרלי — ההתאמות צריכות לבלוט, לא ה-UI */
+  background-color: #f1f2f4;
+  color: #1c1e21;
+  margin: 0;
+}
+
+/* חדות מלאה לתצוגת התאמות */
+.creative-img {
+  image-rendering: auto;
+  display: block;
+}
+.creative-img.pixel-100 {
+  image-rendering: -webkit-optimize-contrast;
+}
+
+/* אנימציית פתיחה עדינה ל-lightbox */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fade-in { animation: fade-in 120ms ease-out; }
