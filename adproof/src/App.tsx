@@ -76,6 +76,19 @@ export default function App() {
             <button
               className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
               onClick={() => {
+                if (files.length === 0 || confirm('לאפס את הכלי? כל הקבצים והסשן יימחקו.')) {
+                  resetSession();
+                  // רענון מלא: מנקה גם מטמוני OCR וזיכרון, וחוזר למצב התחלתי נקי
+                  setTimeout(() => window.location.reload(), 100);
+                }
+              }}
+              title="איפוס מלא של הכלי — מחיקת הסשן וטעינה מחדש"
+            >
+              ⟳ רענן
+            </button>
+            <button
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+              onClick={() => {
                 if (files.length === 0 || confirm('להתחיל קמפיין חדש? הסשן הנוכחי יימחק.')) resetSession();
               }}
             >
