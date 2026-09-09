@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd adproof && npm ci",
+  "buildCommand": "cd adproof && npm run build",
+  "outputDirectory": "adproof/dist"
+}
