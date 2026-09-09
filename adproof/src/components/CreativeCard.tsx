@@ -47,27 +47,32 @@ function CreativeCard({ item, onOpen }: Props) {
         onClick={onOpen}
         draggable={false}
       />
+      {/* קריטי (נחתך/מכוסה בפועל) — אדום; מומלץ (שוליים בלבד) — ירוק */}
       {showSafeZones && spec.safeArea && (spec.safeArea.top || spec.safeArea.bottom || spec.safeArea.left || spec.safeArea.right) ? (
         <div
-          className="pointer-events-none absolute border border-dashed border-emerald-400"
+          className={`pointer-events-none absolute border border-dashed ${severity === 'critical' ? 'border-red-400' : 'border-emerald-400'}`}
           style={{
             top: `${(spec.safeArea.top ?? 0) * 100}%`,
             bottom: `${(spec.safeArea.bottom ?? 0) * 100}%`,
             left: `${(spec.safeArea.left ?? 0) * 100}%`,
             right: `${(spec.safeArea.right ?? 0) * 100}%`,
-            boxShadow: '0 0 0 9999px rgba(16, 185, 129, 0.18)',
+            boxShadow: severity === 'critical' ? '0 0 0 9999px rgba(239, 68, 68, 0.22)' : '0 0 0 9999px rgba(16, 185, 129, 0.16)',
           }}
-          title="אזור בטוח — תוכן חשוב נשאר בתוך המסגרת המקווקוות"
+          title={
+            severity === 'critical'
+              ? 'האזור האדום נחתך או מכוסה על ידי הפלטפורמה — תוכן חשוב נשאר בתוך המסגרת'
+              : 'שוליים מומלצים — תוכן חשוב עדיף בתוך המסגרת המקווקוות'
+          }
         />
       ) : null}
       {showSafeZones && spec.safeArea?.cornerTL && (
         <div
-          className="pointer-events-none absolute left-0 top-0 flex items-start justify-start border border-dashed border-emerald-500 bg-emerald-400/25"
+          className="pointer-events-none absolute left-0 top-0 border border-dashed border-red-500 bg-red-500/25"
           style={{
             width: spec.safeArea.cornerTL.w * (d.width / slotW),
             height: spec.safeArea.cornerTL.h * (d.height / slotH),
           }}
-          title='אזור שמור לתגית "מודעה" של יאנדקס — בלי לוגו, מחיר או CTA'
+          title='תגית "מודעה" של יאנדקס תוצג כאן — בלי לוגו, מחיר או CTA באזור הזה'
         />
       )}
     </div>
