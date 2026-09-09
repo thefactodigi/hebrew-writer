@@ -3,7 +3,9 @@ import { useSession } from './store/session.ts';
 import { deriveBoard } from './store/derive.ts';
 import ReviewBoard from './components/ReviewBoard.tsx';
 import UploadZone from './components/UploadZone.tsx';
-import { exportPdf } from './pdf/exporter.ts';
+import { exportPdf, type ExportAnnotation } from './pdf/exporter.ts';
+import { analyzeFile, ocrFile } from './engine/analyzer.ts';
+import { validateAgainstSpec } from './engine/validators.ts';
 
 export default function App() {
   const loaded = useSession((s) => s.loaded);
@@ -15,6 +17,7 @@ export default function App() {
   const setClientName = useSession((s) => s.setClientName);
   const resetSession = useSession((s) => s.resetSession);
   const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState('');
 
   useEffect(() => {
     void loadFromDb();
@@ -42,6 +45,54 @@ export default function App() {
       alert(`ייצוא ה-PDF נכשל: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setExporting(false);
+    }
+  };
+
+  /** גרסה פנימית: סריקת OCR + איסוף כל ההערות והטבעתן ליד כל עיצוב */
+  const onExportInternal = async () => {
+    setExporting(true);
+    try {
+      const annotationsByFile = new Map<string, ExportAnnotation[]>();
+      const perFile = new Map<string, { file: (typeof files)[number]; specs: { spec: (typeof board.platforms)[number]['groups'][number]['items'][number]['spec']; retina: number }[] }>();
+      for (const p of board.platforms) {
+        for (const g of p.groups) {
+          for (const item of g.items) {
+            if (item.hidden) continue;
+            const entry = perFile.get(item.file.id) ?? { file: item.file, specs: [] };
+            entry.specs.push({ spec: item.spec, retina: item.retina });
+            perFile.set(item.file.id, entry);
+            // אזהרות ולידציה (משקל/פורמט/רזולוציה) — פר פלייסמנט
+            for (const w of validateAgainstSpec(item.file, item.spec)) {
+              const list = annotationsByFile.get(item.file.id) ?? [];
+              list.push({ level: w.level, text: w.message, placement: item.spec.name });
+              annotationsByFile.set(item.file.id, list);
+            }
+          }
+        }
+      }
+      // סריקת OCR — אם נכשלת (למשל בקובץ העצמאי), ממשיכים עם אזהרות הוולידציה בלבד
+      try {
+        const entries = [...perFile.values()];
+        for (let i = 0; i < entries.length; i++) {
+          setExportProgress(`סורק ${i + 1}/${entries.length}…`);
+          const { file, specs } = entries[i];
+          const issues = await analyzeFile(file, specs, await ocrFile(file));
+          for (const issue of issues) {
+            const list = annotationsByFile.get(file.id) ?? [];
+            list.push({ level: issue.level, text: issue.message, placement: issue.placement });
+            annotationsByFile.set(file.id, list);
+          }
+        }
+      } catch {
+        alert('סריקת התוכן (OCR) לא זמינה — הגרסה הפנימית תכלול רק אזהרות משקל/פורמט');
+      }
+      setExportProgress('בונה PDF…');
+      await exportPdf(board, { campaignName, clientName }, { internal: true, annotationsByFile });
+    } catch (err) {
+      alert(`ייצוא ה-PDF נכשל: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setExporting(false);
+      setExportProgress('');
     }
   };
 
@@ -95,11 +146,20 @@ export default function App() {
               קמפיין חדש
             </button>
             <button
+              className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-1.5 text-sm text-amber-800 hover:bg-amber-100 disabled:opacity-40"
+              disabled={files.length === 0 || exporting}
+              onClick={() => void onExportInternal()}
+              title="PDF פנימי לצוות: כל הערות הבדיקה (רגולציה, ט.ל.ח, אזור בטוח, משקל, כתיב) מוטבעות ליד כל עיצוב. לא לשליחה ללקוח."
+            >
+              {exporting && exportProgress ? exportProgress : 'PDF עם הערות'}
+            </button>
+            <button
               className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40"
               disabled={files.length === 0 || exporting}
               onClick={() => void onExport()}
+              title="ה-PDF הנקי שנשלח ללקוח — בלי שום הערת בדיקה"
             >
-              {exporting ? 'מייצא…' : 'ייצוא PDF'}
+              {exporting && !exportProgress ? 'מייצא…' : 'ייצוא PDF ללקוח'}
             </button>
           </div>
         </div>

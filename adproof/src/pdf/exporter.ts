@@ -45,13 +45,31 @@ export interface ExportMeta {
   clientName: string;
 }
 
+/** הערת בדיקה להטבעה בגרסה הפנימית */
+export interface ExportAnnotation {
+  level: 'error' | 'warn';
+  text: string;
+  /** מוגבל לפלייסמנט מסוים, או לכל הופעות הקובץ */
+  placement?: string;
+}
+
+export interface ExportOptions {
+  /** גרסה פנימית: הערות פר-קובץ (רגולציה, אזור בטוח, משקל, כתיב) מוטבעות ליד כל עיצוב */
+  internal?: boolean;
+  annotationsByFile?: Map<string, ExportAnnotation[]>;
+}
+
 interface Ctx {
   doc: PDFDocument;
   font: PDFFont;
   bold: PDFFont;
   meta: ExportMeta;
   pageNum: number;
+  options: ExportOptions;
 }
+
+const RED = rgb(0.8, 0.15, 0.15);
+const AMBER = rgb(0.7, 0.45, 0.05);
 
 // ── טקסט עברי: ציור ריצות כיווניות בסדר ויזואלי, ריצה-ריצה ───────────────────
 function drawRuns(page: PDFPage, font: PDFFont, text: string, xLeft: number, y: number, size: number, color = GRAY_9) {
@@ -72,6 +90,23 @@ function drawRtl(page: PDFPage, font: PDFFont, text: string, xRight: number, y: 
 
 function drawCentered(page: PDFPage, font: PDFFont, text: string, xCenter: number, y: number, size: number, color = GRAY_9) {
   drawRuns(page, font, text, xCenter - textWidth(font, text, size) / 2, y, size, color);
+}
+
+/** שבירת שורות פשוטה לפי מילים, לרוחב נתון */
+function wrapText(font: PDFFont, text: string, size: number, maxW: number): string[] {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let line = '';
+  for (const w of words) {
+    const candidate = line ? `${line} ${w}` : w;
+    if (textWidth(font, candidate, size) <= maxW || !line) line = candidate;
+    else {
+      lines.push(line);
+      line = w;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
 }
 
 // ── הכנת תמונות להטמעה ──────────────────────────────────────────────────────
@@ -158,6 +193,10 @@ function drawCover(ctx: Ctx, board: BoardView) {
   drawCentered(page, ctx.font, ctx.meta.campaignName || 'קמפיין', cx, PAGE_H - 262, 18, GRAY_5);
   drawCentered(page, ctx.font, new Date().toLocaleDateString('he-IL'), cx, PAGE_H - 288, 11, GRAY_5);
 
+  if (ctx.options.internal) {
+    drawCentered(page, ctx.bold, 'גרסה פנימית — כולל הערות בדיקה · לא לשליחה ללקוח', cx, PAGE_H - 312, 12, RED);
+  }
+
   let y = PAGE_H - 340;
   drawCentered(page, ctx.bold, 'התאמות לאישור', cx, y, 13);
   y -= 24;
@@ -207,7 +246,35 @@ function itemLabel(item: AssignmentView): string {
   return parts.join(' · ');
 }
 
+interface AnnLine {
+  color: ReturnType<typeof rgb>;
+  text: string;
+}
+
+const ANN_SIZE = 6.5;
+const ANN_LH = 8.5;
+
+/** הערות הבדיקה של פריט, שבורות לשורות; הערות כלל-קובץ מוצמדות להופעה הראשונה */
+function itemAnnotations(ctx: Ctx, placed: PlacedItem, drawnFileIds: Set<string>): AnnLine[] {
+  if (!ctx.options.internal) return [];
+  const anns = ctx.options.annotationsByFile?.get(placed.item.file.id) ?? [];
+  const firstAppearance = !drawnFileIds.has(placed.item.file.id);
+  const relevant = anns.filter((a) =>
+    a.placement ? a.placement === placed.item.spec.name : firstAppearance,
+  );
+  const wrapW = Math.max(placed.plan.w, 180);
+  const lines: AnnLine[] = [];
+  for (const a of relevant.slice(0, 5)) {
+    const color = a.level === 'error' ? RED : AMBER;
+    for (const l of wrapText(ctx.font, `• ${a.text}`, ANN_SIZE, wrapW).slice(0, 3)) {
+      lines.push({ color, text: l });
+    }
+  }
+  return lines.slice(0, 10);
+}
+
 async function drawPlatformPages(ctx: Ctx, board: BoardView, images: Map<string, PDFImage>) {
+  const drawnFileIds = new Set<string>();
   for (const platform of board.platforms) {
     if (platform.visibleCount === 0) continue;
     let page = newPage(ctx);
@@ -236,12 +303,14 @@ async function drawPlatformPages(ctx: Ctx, board: BoardView, images: Map<string,
       const flushRow = () => {
         if (!rowItems.length) return;
         const rowH = Math.max(...rowItems.map((r) => r.plan.h));
-        if (y - rowH - LABEL_H < MARGIN + FOOTER_H) {
+        const annsPerItem = rowItems.map((r) => itemAnnotations(ctx, r, drawnFileIds));
+        const annH = Math.max(0, ...annsPerItem.map((a) => a.length)) * ANN_LH;
+        if (y - rowH - LABEL_H - annH < MARGIN + FOOTER_H) {
           page = newPage(ctx);
           y = PAGE_H - MARGIN - 10;
         }
         let x = PAGE_W - MARGIN;
-        for (const placed of rowItems) {
+        rowItems.forEach((placed, idx) => {
           const pdfImg = images.get(placed.item.file.id);
           const drawX = x - placed.plan.w;
           const yTop = y - (rowH - placed.plan.h);
@@ -251,9 +320,15 @@ async function drawPlatformPages(ctx: Ctx, board: BoardView, images: Map<string,
             });
           }
           drawCentered(page, ctx.font, itemLabel(placed.item), drawX + placed.plan.w / 2, y - rowH - 11, 7.5, GRAY_5);
+          let ay = y - rowH - 11 - ANN_LH;
+          for (const line of annsPerItem[idx]) {
+            drawRtl(page, ctx.font, line.text, drawX + Math.max(placed.plan.w, 180), ay, ANN_SIZE, line.color);
+            ay -= ANN_LH;
+          }
+          drawnFileIds.add(placed.item.file.id);
           x = drawX - GAP;
-        }
-        y -= rowH + LABEL_H + GAP;
+        });
+        y -= rowH + LABEL_H + annH + GAP;
         rowItems = [];
         xRight = PAGE_W - MARGIN;
       };
@@ -271,7 +346,7 @@ async function drawPlatformPages(ctx: Ctx, board: BoardView, images: Map<string,
 }
 
 // ── נקודת הכניסה ────────────────────────────────────────────────────────────
-export async function exportPdf(board: BoardView, meta: ExportMeta): Promise<void> {
+export async function exportPdf(board: BoardView, meta: ExportMeta, options: ExportOptions = {}): Promise<void> {
   const visibleItems = board.platforms.flatMap((p) => p.groups).flatMap((g) => g.items).filter((i) => !i.hidden);
   if (!visibleItems.length) throw new Error('אין התאמות גלויות לייצוא');
 
@@ -304,7 +379,7 @@ export async function exportPdf(board: BoardView, meta: ExportMeta): Promise<voi
     );
   }
 
-  const ctx: Ctx = { doc, font, bold, meta, pageNum: 0 };
+  const ctx: Ctx = { doc, font, bold, meta, pageNum: 0, options };
   drawCover(ctx, board);
   await drawPlatformPages(ctx, board, images);
 
@@ -314,7 +389,7 @@ export async function exportPdf(board: BoardView, meta: ExportMeta): Promise<voi
   const a = document.createElement('a');
   const safe = (s: string) => s.trim().replace(/[\\/:*?"<>|]/g, '-') || 'adproof';
   a.href = url;
-  a.download = `AdProof_${safe(meta.clientName)}_${safe(meta.campaignName)}.pdf`;
+  a.download = `AdProof_${safe(meta.clientName)}_${safe(meta.campaignName)}${options.internal ? '_internal' : ''}.pdf`;
   document.body.appendChild(a);
   a.click();
   a.remove();
