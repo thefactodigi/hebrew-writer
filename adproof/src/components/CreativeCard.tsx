@@ -25,6 +25,7 @@ function CreativeCard({ item, onOpen }: Props) {
   const setMockupMode = useSession((s) => s.setMockupMode);
   const removeFile = useSession((s) => s.removeFile);
   const viewMode = useSession((s) => s.viewMode);
+  const showSafeZones = useSession((s) => s.showSafeZones);
 
   // מידות הסלוט (קובץ רטינה מוצג בגודל הסלוט, בחדות מלאה)
   const slotW = spec.matchType === 'exact' ? spec.width : Math.round(file.width / retina);
@@ -35,7 +36,7 @@ function CreativeCard({ item, onOpen }: Props) {
       : displaySize(slotW, slotH);
 
   const img = (
-    <div className="relative" style={{ width: d.width, height: d.height }}>
+    <div className="relative overflow-hidden" style={{ width: d.width, height: d.height }}>
       <img
         src={file.url}
         alt={file.name}
@@ -44,19 +45,18 @@ function CreativeCard({ item, onOpen }: Props) {
         onClick={onOpen}
         draggable={false}
       />
-      {spec.safeArea && (
-        <>
-          <div
-            className="pointer-events-none absolute inset-x-0 top-0 border-b border-dashed border-emerald-400 bg-emerald-400/15"
-            style={{ height: `${spec.safeArea.top * 100}%` }}
-            title="אזור UI עליון — לא בטוח לטקסט"
-          />
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 border-t border-dashed border-emerald-400 bg-emerald-400/15"
-            style={{ height: `${spec.safeArea.bottom * 100}%` }}
-            title="אזור UI תחתון — לא בטוח לטקסט"
-          />
-        </>
+      {showSafeZones && spec.safeArea && (
+        <div
+          className="pointer-events-none absolute border border-dashed border-emerald-400"
+          style={{
+            top: `${(spec.safeArea.top ?? 0) * 100}%`,
+            bottom: `${(spec.safeArea.bottom ?? 0) * 100}%`,
+            left: `${(spec.safeArea.left ?? 0) * 100}%`,
+            right: `${(spec.safeArea.right ?? 0) * 100}%`,
+            boxShadow: '0 0 0 9999px rgba(16, 185, 129, 0.18)',
+          }}
+          title="אזור בטוח — תוכן חשוב נשאר בתוך המסגרת המקווקוות"
+        />
       )}
     </div>
   );

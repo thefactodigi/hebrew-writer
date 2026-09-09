@@ -26,6 +26,8 @@ export default function ReviewBoard() {
   const viewMode = useSession((s) => s.viewMode);
   const setViewMode = useSession((s) => s.setViewMode);
   const setAllMockupModes = useSession((s) => s.setAllMockupModes);
+  const showSafeZones = useSession((s) => s.showSafeZones);
+  const setShowSafeZones = useSession((s) => s.setShowSafeZones);
   const [tab, setTab] = useState<Tab>('all');
 
   const shownPlatforms =
@@ -76,6 +78,18 @@ export default function ReviewBoard() {
           title="הצגת כל ההתאמות בתוך מוקאפ של הפלייסמנט (או חזרה לתצוגה נקייה)"
         >
           {allInContext ? 'הכל נקי' : 'הכל בהקשר'}
+        </button>
+
+        <button
+          className={`rounded-lg border px-3 py-1 ${
+            showSafeZones
+              ? 'border-emerald-400 bg-emerald-50 text-emerald-700'
+              : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+          }`}
+          onClick={() => setShowSafeZones(!showSafeZones)}
+          title="סימון האזור הבטוח על כל התאמה: סטוריז לפי פסי ה-UI, PMax לפי כלל ה-80% המרכזי, פיד ובאנרים עם שוליים של 5%. לא נכנס ל-PDF."
+        >
+          אזור בטוח {showSafeZones ? '✓' : ''}
         </button>
 
         {viewMode === 'actual' && (

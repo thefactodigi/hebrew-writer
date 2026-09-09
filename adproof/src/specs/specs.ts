@@ -8,6 +8,18 @@ export type Platform = 'google_display' | 'pmax' | 'meta' | 'yandex';
 export type MatchType = 'exact' | 'ratio';
 export type ImageFormat = 'jpg' | 'png' | 'gif';
 
+export interface SafeArea {
+  top?: number;
+  bottom?: number;
+  left?: number;
+  right?: number;
+}
+
+/** שוליים בטוחים מומלצים לבאנרים ולפיד — 5% מכל צד */
+export const SAFE_MARGIN_5: SafeArea = { top: 0.05, bottom: 0.05, left: 0.05, right: 0.05 };
+/** כלל ה-80% המרכזי של PMax — התוכן החשוב ב-80% הפנימיים */
+export const SAFE_PMAX_80: SafeArea = { top: 0.1, bottom: 0.1, left: 0.1, right: 0.1 };
+
 export interface PlacementSpec {
   id: string;
   platform: Platform;
@@ -25,8 +37,11 @@ export interface PlacementSpec {
   minHeight?: number;
   /** נכס חובה בקמפיין (PMax) */
   required?: boolean;
-  /** תצוגת אזור בטוח (Stories/Reels): אחוז עליון/תחתון */
-  safeArea?: { top: number; bottom: number };
+  /**
+   * אזור בטוח: שוליים (כשבר 0..1) מכל צד שבהם אסור לשים תוכן חשוב.
+   * Stories: פסי UI עליון/תחתון; PMax: כלל ה-80% המרכזי; באנרים/פיד: שוליים מומלצים.
+   */
+  safeArea?: SafeArea;
   /** לוגו (להבחנת Square Image / Square Logo) */
   isLogo?: boolean;
   /** מוקאפ הקשר מתאים */
@@ -104,6 +119,13 @@ export const SPECS: PlacementSpec[] = [
   { id: 'yandex_320x480', platform: 'yandex', group: 'Mobile', name: '320×480', width: 320, height: 480, matchType: 'exact', maxFileKb: 120, formats: ['jpg', 'png', 'gif'], mockup: 'website' },
   { id: 'yandex_480x320', platform: 'yandex', group: 'Mobile', name: '480×320', width: 480, height: 320, matchType: 'exact', maxFileKb: 120, formats: ['jpg', 'png', 'gif'], mockup: 'website' },
 ];
+
+// אזור בטוח לכל פלייסמנט שלא הגדיר אחד מפורשות:
+// PMax (תמונות) — כלל ה-80% המרכזי; לוגואים — בלי; כל השאר — שוליים 5%.
+for (const s of SPECS) {
+  if (s.safeArea || s.isLogo) continue;
+  s.safeArea = s.platform === 'pmax' ? SAFE_PMAX_80 : SAFE_MARGIN_5;
+}
 
 export function getSpec(id: string): PlacementSpec | undefined {
   return SPECS.find((s) => s.id === id);

@@ -181,10 +181,11 @@ function PhoneStory({ children, displayWidth }: { children: ReactNode; displayWi
             <span className="ms-1 rounded bg-white/25 px-1 text-[8px] leading-3 text-white">ממומן</span>
           </div>
         </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-2 p-2 pb-4">
-          <span className="h-7 flex-1 rounded-full border border-white/70" />
-          <span className="h-6 w-6 rounded-full border border-white/70" />
-          <span className="h-6 w-6 rounded-full border border-white/70" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-1.5 p-2 pb-4">
+          <span className="text-[10px] leading-3 text-white/80">︿</span>
+          <span className="flex h-8 w-2/3 items-center justify-center rounded-full bg-white text-xs font-medium text-gray-900 shadow">
+            Shop Now
+          </span>
         </div>
       </div>
     </Phone>

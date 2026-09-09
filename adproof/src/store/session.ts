@@ -46,6 +46,8 @@ interface SessionState {
   groupOrder: string[];
   /** smart = קנה מידה חכם; actual = הגודל שבו הפלייסמנט באמת נראה בפלטפורמה */
   viewMode: ViewMode;
+  /** הצגת אזורים בטוחים על ההתאמות (מצב עבודה בלבד, לא ב-PDF) */
+  showSafeZones: boolean;
 
   setCampaignName: (v: string) => void;
   setClientName: (v: string) => void;
@@ -56,6 +58,7 @@ interface SessionState {
   /** החלת מצב מוקאפ על כל ההתאמות בבת אחת */
   setAllMockupModes: (keys: string[], mode: MockupMode) => void;
   setViewMode: (mode: ViewMode) => void;
+  setShowSafeZones: (v: boolean) => void;
   addManualAssignment: (fileId: string, specId: string) => void;
   removeAssignment: (fileId: string, specId: string) => void;
   moveAssignment: (fileId: string, fromSpecId: string | null, toSpecId: string) => void;
@@ -88,6 +91,7 @@ interface PersistedSession {
   mockupModes: Record<string, MockupMode>;
   groupOrder: string[];
   viewMode?: ViewMode;
+  showSafeZones?: boolean;
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -105,6 +109,7 @@ function persist(state: SessionState) {
       mockupModes: state.mockupModes,
       groupOrder: state.groupOrder,
       viewMode: state.viewMode,
+      showSafeZones: state.showSafeZones,
     };
     void idbSet(DB_KEY, data).catch(() => {
       /* אין חסימה על כשל שמירה — הסשן ממשיך לרוץ בזיכרון */
@@ -129,6 +134,7 @@ export const useSession = create<SessionState>((set, get) => {
     mockupModes: {},
     groupOrder: [],
     viewMode: 'smart',
+    showSafeZones: true,
 
     setCampaignName: (v) => update({ campaignName: v }),
     setClientName: (v) => update({ clientName: v }),
@@ -163,6 +169,8 @@ export const useSession = create<SessionState>((set, get) => {
       }),
 
     setViewMode: (mode) => update({ viewMode: mode }),
+
+    setShowSafeZones: (v) => update({ showSafeZones: v }),
 
     addManualAssignment: (fileId, specId) => {
       const key = assignmentKey(fileId, specId);
@@ -206,6 +214,7 @@ export const useSession = create<SessionState>((set, get) => {
         mockupModes: {},
         groupOrder: [],
         viewMode: 'smart',
+        showSafeZones: true,
       });
     },
 
@@ -223,6 +232,7 @@ export const useSession = create<SessionState>((set, get) => {
             mockupModes: data.mockupModes ?? {},
             groupOrder: data.groupOrder ?? [],
             viewMode: data.viewMode ?? 'smart',
+            showSafeZones: data.showSafeZones ?? true,
             loaded: true,
           });
           return;
