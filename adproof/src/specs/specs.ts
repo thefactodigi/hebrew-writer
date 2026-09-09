@@ -69,6 +69,12 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
   yandex: 'Yandex',
 };
 
+/**
+ * הפלטפורמות הפעילות בכלי. google_display הוסר מהתצוגה (הרשומות שלו
+ * נשמרות למטה) — כדי להחזיר אותו, מוסיפים אותו כאן וזהו.
+ */
+export const ACTIVE_PLATFORMS: Platform[] = ['pmax', 'meta', 'yandex'];
+
 export const PLATFORM_ORDER: Platform[] = ['google_display', 'pmax', 'meta', 'yandex'];
 
 /** טולרנס סטיית יחס להתאמות ratio (1%) */
@@ -77,7 +83,7 @@ export const RATIO_TOLERANCE = 0.01;
 /** קובץ 1:1 עד גודל זה (כולל) מסווג כלוגו PMax, מעליו כתמונה */
 export const PMAX_LOGO_MAX_PX = 400;
 
-export const SPECS: PlacementSpec[] = [
+export const ALL_SPECS: PlacementSpec[] = [
   // ── Google Display Network (exact, עד 150KB) ──────────────────────────────
   { id: 'gdn_300x250', platform: 'google_display', group: 'Desktop', name: 'Medium Rectangle', width: 300, height: 250, matchType: 'exact', maxFileKb: 150, formats: ['jpg', 'png', 'gif'], mockup: 'website' },
   { id: 'gdn_336x280', platform: 'google_display', group: 'Desktop', name: 'Large Rectangle', width: 336, height: 280, matchType: 'exact', maxFileKb: 150, formats: ['jpg', 'png', 'gif'], mockup: 'website' },
@@ -133,11 +139,14 @@ export const SPECS: PlacementSpec[] = [
 // אזור בטוח לכל פלייסמנט שלא הגדיר אחד מפורשות:
 // PMax (תמונות) — כלל ה-80% המרכזי; יאנדקס — פינת תגית המודעה בלבד;
 // לוגואים — בלי; כל השאר — שוליים מומלצים 5%.
-for (const s of SPECS) {
+for (const s of ALL_SPECS) {
   if (s.safeArea || s.isLogo) continue;
   s.safeArea =
     s.platform === 'pmax' ? SAFE_PMAX_80 : s.platform === 'yandex' ? SAFE_YANDEX_TAG : SAFE_MARGIN_5;
 }
+
+/** הרשימה שהכלי עובד איתה בפועל — רק פלטפורמות פעילות */
+export const SPECS: PlacementSpec[] = ALL_SPECS.filter((s) => ACTIVE_PLATFORMS.includes(s.platform));
 
 export function getSpec(id: string): PlacementSpec | undefined {
   return SPECS.find((s) => s.id === id);

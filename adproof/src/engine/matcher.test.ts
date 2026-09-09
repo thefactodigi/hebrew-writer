@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { ALL_SPECS } from '../specs/specs.ts';
 import {
   matchExact,
   matchRatio,
@@ -21,19 +22,29 @@ const specIds = (matches: ReturnType<typeof matchFile>) => matches.map((m) => m.
 describe('matchExact', () => {
   it('משייך התאמת פיקסלים 1:1', () => {
     const m = matchExact(file('f1', 300, 600));
-    expect(specIds(m)).toEqual(['gdn_300x600', 'yandex_300x600']);
+    expect(specIds(m)).toEqual(['yandex_300x600']);
     expect(m.every((x) => x.retina === 1)).toBe(true);
   });
 
   it('משייך רטינה x2 לסלוט הבסיס', () => {
     const m = matchExact(file('f1', 600, 1200));
-    expect(specIds(m)).toEqual(['gdn_300x600', 'yandex_300x600']);
+    expect(specIds(m)).toEqual(['yandex_300x600']);
     expect(m.every((x) => x.retina === 2)).toBe(true);
   });
 
   it('משייך רטינה x3', () => {
     const m = matchExact(file('f1', 960, 150));
-    expect(m.some((x) => x.specId === 'gdn_320x50' && x.retina === 3)).toBe(true);
+    expect(m.some((x) => x.specId === 'yandex_320x50' && x.retina === 3)).toBe(true);
+  });
+
+  it('פלטפורמה לא פעילה (Google Display) לא מקבלת שיוכים', () => {
+    const m = matchExact(file('f1', 468, 60)); // מידה שקיימת רק ב-GDN
+    expect(m).toEqual([]);
+  });
+
+  it('ריבוי פלטפורמות עובד כשכולן פעילות (ALL_SPECS)', () => {
+    const m = matchExact(file('f1', 300, 250), ALL_SPECS);
+    expect(specIds(m)).toEqual(['gdn_300x250', 'yandex_300x250']);
   });
 
   it('לא משייך מידה שאינה סלוט ואינה כפולה', () => {
@@ -90,15 +101,14 @@ describe('matchRatio', () => {
 });
 
 describe('matchFile — ריבוי שיוכים בין פלטפורמות', () => {
-  it('300x250 נכנס גם ל-Google Display וגם ל-Yandex', () => {
+  it('300x250 נכנס ל-Yandex (הפלטפורמה הפעילה היחידה למידה הזאת)', () => {
     const ids = specIds(matchFile(file('f1', 300, 250)));
-    expect(ids).toContain('gdn_300x250');
     expect(ids).toContain('yandex_300x250');
+    expect(ids).not.toContain('gdn_300x250');
   });
 
-  it('קובץ 250x250 מקבל exact ב-GDN בלי ratio של PMax (מתחת למינימום)', () => {
+  it('קובץ 250x250 מסווג כלוגו PMax בלי ratio של תמונה (מתחת למינימום)', () => {
     const ids = specIds(matchFile(file('f1', 250, 250)));
-    expect(ids).toContain('gdn_250x250');
     expect(ids).not.toContain('pmax_square');
     // 250px הוא עד 400 → מועמד לוגו, ועומד במינימום 128
     expect(ids).toContain('pmax_logo_square');
@@ -113,7 +123,7 @@ describe('nearestSpec', () => {
   it('מציע את הסלוט הקרוב ביותר לקובץ לא משויך', () => {
     const s = nearestSpec({ width: 305, height: 255 });
     expect(s).not.toBeNull();
-    expect(['gdn_300x250', 'yandex_300x250']).toContain(s!.spec.id);
+    expect(s!.spec.id).toBe('yandex_300x250');
   });
 });
 
