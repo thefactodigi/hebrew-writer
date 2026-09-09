@@ -18,7 +18,7 @@ export interface OcrWord {
   y1: number;
 }
 
-export type IssueCategory = 'safe-zone' | 'cutoff' | 'small-text' | 'spelling';
+export type IssueCategory = 'safe-zone' | 'cutoff' | 'small-text' | 'spelling' | 'compliance';
 
 export interface FileIssue {
   category: IssueCategory;
@@ -239,7 +239,68 @@ export async function analyzeFile(
     }
   }
 
-  // 4. חשדות לשגיאות כתיב (מסומן כחשד — OCR עלול לטעות בעצמו)
+  // 4. רגולציה — לפי מדריך הסייגים והאותיות הקטנות (הגנת הצרכן, ישראל)
+  {
+    const strong = meaningful.filter((w) => w.conf >= 60);
+    const normHe = (t: string) => t.replace(/[^א-ת]/g, '');
+    const joined = strong.map((w) => stripPunct(w.text)).join(' ');
+
+    // 4א. ט.ל.ח — אינו פטור משפטי
+    if (words.some((w) => w.conf >= 50 && normHe(w.text) === 'טלח')) {
+      issues.push({
+        category: 'compliance',
+        level: 'error',
+        fileId: file.id,
+        fileName: file.name,
+        message: 'מופיע "ט.ל.ח" — זה אינו פטור משפטי ואינו מחליף פירוט של התנאי עצמו (מחיר, תוקף, זכאות, מלאי)',
+      });
+    }
+
+    // 4ב. כלל ה-30%: גובה הסייג מול האות הגדולה ביותר במודעה
+    const maxH = strong.length ? Math.max(...strong.map((w) => w.y1 - w.y0)) : 0;
+    if (maxH >= H * 0.04) {
+      const tiny30 = strong.filter((w) => {
+        const h = w.y1 - w.y0;
+        return h > 4 && h < maxH * 0.3 && stripPunct(w.text).length >= 3;
+      });
+      if (tiny30.length >= 3) {
+        const heightsSorted = tiny30.map((w) => w.y1 - w.y0).sort((a, b) => a - b);
+        const median = heightsSorted[Math.floor(heightsSorted.length / 2)];
+        issues.push({
+          category: 'compliance',
+          level: 'error',
+          fileId: file.id,
+          fileName: file.name,
+          message: `טקסט קטן בגובה ~${Math.round((median / maxH) * 100)}% מהאות הגדולה במודעה — תקנות הגנת הצרכן דורשות לפחות 30% לסייג/תנאי`,
+        });
+      }
+    }
+
+    // 4ג. מילות סייג — תזכורת כללי הצגה (הערה פר-עיצוב)
+    const CONDITION_PATTERNS: Array<[RegExp, string]> = [
+      [/בכפוף/, 'בכפוף ל...'],
+      [/גמר המלאי/, 'עד גמר המלאי'],
+      [/בתוקף עד/, 'בתוקף עד'],
+      [/החל מ/, 'החל מ-'],
+      [/כפל מבצעים/, 'אין כפל מבצעים'],
+      [/חברי מועדון/, 'לחברי מועדון'],
+      [/תשלומים/, 'תשלומים'],
+      [/תקנון/, 'תקנון'],
+      [/לקוחות חדשים/, 'לקוחות חדשים'],
+    ];
+    const found = CONDITION_PATTERNS.filter(([re]) => re.test(joined)).map(([, label]) => label);
+    if (found.length) {
+      issues.push({
+        category: 'compliance',
+        level: 'warn',
+        fileId: file.id,
+        fileName: file.name,
+        message: `זוהו מילות סייג (${found.join(', ')}) — ודאו: גודל ≥30% מהאות הגדולה, ניגודיות מספקת, מיקום צמוד להבטחה, בתוך האזור הבטוח, ומחיר כולל תשלומי חובה`,
+      });
+    }
+  }
+
+  // 5. חשדות לשגיאות כתיב (מסומן כחשד — OCR עלול לטעות בעצמו)
   try {
     const dicts = await loadDicts();
     const suspects = new Set<string>();

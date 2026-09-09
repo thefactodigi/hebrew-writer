@@ -21,10 +21,11 @@ const CATEGORY_LABELS: Record<FileIssue['category'], string> = {
   'safe-zone': 'יציאה מהאזור הבטוח',
   cutoff: 'טקסט חתוך בקצה',
   'small-text': 'טקסט קטן מדי',
+  compliance: 'רגולציה — סייגים ואותיות קטנות (הגנת הצרכן)',
   spelling: 'מילים לבדיקת כתיב',
 };
 
-const CATEGORY_ORDER: FileIssue['category'][] = ['safe-zone', 'cutoff', 'small-text', 'spelling'];
+const CATEGORY_ORDER: FileIssue['category'][] = ['compliance', 'safe-zone', 'cutoff', 'small-text', 'spelling'];
 
 export default function IssuesReport({ board, open, onClose }: Props) {
   const [phase, setPhase] = useState<Phase>('idle');
@@ -128,7 +129,8 @@ export default function IssuesReport({ board, open, onClose }: Props) {
             </div>
             <p className="mb-3 text-xs text-gray-400">
               זיהוי הטקסט רץ מקומית בדפדפן (בפעם הראשונה נטענים מודלים, ~7MB). התוצאות הן עזר
-              למעצב — OCR עלול לפספס או לטעות, במיוחד בטיפוגרפיה מעוצבת.
+              למעצב — OCR עלול לפספס או לטעות, במיוחד בטיפוגרפיה מעוצבת. בדיקות הרגולציה
+              מבוססות על מדריך הסייגים והאותיות הקטנות (כלל ה-30%, ט.ל.ח) ואינן ייעוץ משפטי.
             </p>
 
             {phase === 'running' && (
