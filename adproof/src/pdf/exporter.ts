@@ -9,7 +9,8 @@ import fontkit from '@pdf-lib/fontkit';
 import type { BoardView, AssignmentView } from '../store/derive.ts';
 import type { CreativeFile } from '../store/session.ts';
 import { PLATFORM_LABELS } from '../specs/specs.ts';
-import { displaySize } from '../engine/scale.ts';
+import { actualSize } from '../engine/scale.ts';
+import { planMockup, type MockupPlan } from './mockups.ts';
 import { visualRuns } from './bidi.ts';
 import heeboRegularUrl from './fonts/Heebo-Regular.ttf';
 import heeboBoldUrl from './fonts/Heebo-Bold.ttf';
@@ -21,17 +22,19 @@ const MARGIN = 40;
 const FOOTER_H = 26;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 /**
- * המרת פיקסלים־תצוגה לנקודות PDF — שומר על אותם יחסי גודל יחסיים כמו במסך,
- * בצפיפות גבוהה יותר כדי שעמוד יכיל כמה שורות של התאמות.
+ * המרת פיקסלים לנקודות PDF. ההתאמות מצוירות ב"מידות אמת" יחסיות —
+ * באנרים בגודל הסלוט, נכסי Meta/PMax ברוחב הרינדור במכשיר — באותו יחס המרה
+ * אחיד, כך שהפרופורציות בין הפלייסמנטים נשמרות כמו בפלטפורמות עצמן.
  */
-const PT_PER_PX = CONTENT_W / 1150;
+const PX2PT = 0.62;
 const GAP = 14;
 const LABEL_H = 13;
+/** גובה תוכן מרבי לפריט בעמוד */
+const MAX_ITEM_H = PAGE_H - MARGIN * 2 - FOOTER_H - 60;
 
 const GRAY_9 = rgb(0.11, 0.12, 0.13);
 const GRAY_5 = rgb(0.45, 0.47, 0.5);
 const GRAY_3 = rgb(0.78, 0.8, 0.82);
-const GRAY_1 = rgb(0.95, 0.95, 0.96);
 
 const TARGET_MAX_BYTES = 25 * 1024 * 1024;
 /** תמונות מעל הסף הזה נדחסות ל-JPEG 85 אם המסמך חורג מהיעד */
@@ -143,18 +146,6 @@ function newPage(ctx: Ctx): PDFPage {
   return page;
 }
 
-// ── מוקאפ מפושט ב-PDF (מצב "בהקשר") ─────────────────────────────────────────
-function drawContextFrame(page: PDFPage, kind: string, x: number, y: number, w: number, h: number) {
-  if (kind === 'phone-story') {
-    page.drawRectangle({ x: x - 5, y: y - 5, width: w + 10, height: h + 10, borderColor: GRAY_9, borderWidth: 3, color: undefined });
-    return;
-  }
-  // שלד אתר / כרטיס פיד: מסגרת בהירה + פסי תוכן מרומזים
-  const pad = 8;
-  page.drawRectangle({ x: x - pad, y: y - pad, width: w + pad * 2, height: h + pad * 2 + 16, borderColor: GRAY_3, borderWidth: 0.8, color: undefined });
-  page.drawRectangle({ x: x - pad + 4, y: y + h + pad - 6, width: (w + pad * 2) * 0.5, height: 4, color: GRAY_1 });
-}
-
 // ── עמוד שער ────────────────────────────────────────────────────────────────
 function drawCover(ctx: Ctx, board: BoardView) {
   const page = newPage(ctx);
@@ -180,16 +171,30 @@ function drawCover(ctx: Ctx, board: BoardView) {
 // ── עמודי פלטפורמות ─────────────────────────────────────────────────────────
 interface PlacedItem {
   item: AssignmentView;
-  w: number;
-  h: number;
-  frameExtra: number;
+  plan: MockupPlan;
+  /** מידות התמונה בתוך המוקאפ (pt) */
+  dw: number;
+  dh: number;
 }
 
-function itemPdfSize(item: AssignmentView): { w: number; h: number } {
+/**
+ * תכנון פריט: גודל אמת של הפלייסמנט (סלוט/רוחב מכשיר) בתוך המוקאפ שלו,
+ * מוקטן רק אם הקופסה חורגת מגבולות העמוד.
+ */
+function planItem(item: AssignmentView): PlacedItem {
   const slotW = item.spec.matchType === 'exact' ? item.spec.width : Math.round(item.file.width / item.retina);
   const slotH = item.spec.matchType === 'exact' ? item.spec.height : Math.round(item.file.height / item.retina);
-  const d = displaySize(slotW, slotH);
-  return { w: d.width * PT_PER_PX, h: d.height * PT_PER_PX };
+  const d = actualSize(slotW, slotH, item.spec.typicalRenderWidth, CONTENT_W / PX2PT);
+  let dw = d.width * PX2PT;
+  let dh = d.height * PX2PT;
+  let plan = planMockup(item.spec, dw, dh);
+  const shrink = Math.min(1, CONTENT_W / plan.w, MAX_ITEM_H / plan.h);
+  if (shrink < 1) {
+    dw *= shrink;
+    dh *= shrink;
+    plan = planMockup(item.spec, dw, dh);
+  }
+  return { item, plan, dw, dh };
 }
 
 function itemLabel(item: AssignmentView): string {
@@ -224,31 +229,28 @@ async function drawPlatformPages(ctx: Ctx, board: BoardView, images: Map<string,
       drawRtl(page, ctx.bold, group.group, PAGE_W - MARGIN, y - 10, 12, GRAY_5);
       y -= 26;
 
-      // פריסת שורות RTL עם גלישה
+      // פריסת שורות RTL עם גלישה; כל פריט מצויר בתוך המוקאפ שלו
       let rowItems: PlacedItem[] = [];
       let xRight = PAGE_W - MARGIN;
 
       const flushRow = () => {
         if (!rowItems.length) return;
-        const rowH = Math.max(...rowItems.map((r) => r.h + r.frameExtra));
+        const rowH = Math.max(...rowItems.map((r) => r.plan.h));
         if (y - rowH - LABEL_H < MARGIN + FOOTER_H) {
           page = newPage(ctx);
           y = PAGE_H - MARGIN - 10;
         }
         let x = PAGE_W - MARGIN;
         for (const placed of rowItems) {
-          const img = images.get(placed.item.file.id);
-          const drawX = x - placed.w;
-          const drawY = y - rowH + (rowH - placed.h - placed.frameExtra);
-          if (img) {
-            if (placed.item.mockupMode === 'context' && placed.item.spec.mockup) {
-              drawContextFrame(page, placed.item.spec.mockup, drawX, drawY, placed.w, placed.h);
-            } else {
-              page.drawRectangle({ x: drawX - 1, y: drawY - 1, width: placed.w + 2, height: placed.h + 2, borderColor: GRAY_3, borderWidth: 0.5, color: undefined });
-            }
-            page.drawImage(img, { x: drawX, y: drawY, width: placed.w, height: placed.h });
+          const pdfImg = images.get(placed.item.file.id);
+          const drawX = x - placed.plan.w;
+          const yTop = y - (rowH - placed.plan.h);
+          if (pdfImg) {
+            placed.plan.draw({ page, font: ctx.font, bold: ctx.bold }, drawX, yTop, (ix, iy, iw, ih) => {
+              page.drawImage(pdfImg, { x: ix, y: iy, width: iw, height: ih });
+            });
           }
-          drawCentered(page, ctx.font, itemLabel(placed.item), drawX + placed.w / 2, drawY - 11, 7.5, GRAY_5);
+          drawCentered(page, ctx.font, itemLabel(placed.item), drawX + placed.plan.w / 2, y - rowH - 11, 7.5, GRAY_5);
           x = drawX - GAP;
         }
         y -= rowH + LABEL_H + GAP;
@@ -257,11 +259,10 @@ async function drawPlatformPages(ctx: Ctx, board: BoardView, images: Map<string,
       };
 
       for (const item of items) {
-        const { w, h } = itemPdfSize(item);
-        const frameExtra = item.mockupMode === 'context' ? 18 : 0;
-        if (xRight - w < MARGIN && rowItems.length) flushRow();
-        rowItems.push({ item, w: Math.min(w, CONTENT_W), h, frameExtra });
-        xRight -= w + GAP;
+        const placed = planItem(item);
+        if (xRight - placed.plan.w < MARGIN && rowItems.length) flushRow();
+        rowItems.push(placed);
+        xRight -= placed.plan.w + GAP;
       }
       flushRow();
       y -= 6;
